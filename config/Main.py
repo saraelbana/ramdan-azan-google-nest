@@ -10,7 +10,6 @@ from constants.PrayersTimesCSSSelectorsConstants import css_selectors
 from constants.PrayersURLConstants import mosqueUrl
 from constants.DuaaVideosURLs import DUAAS
 from constants.MesaharatyAudioURL import MESAHARATY
-from constants.MadfaaAliftar import MADFAA_ALIFTAR
 
 # --- Configuration ---
 # --- Configuration ---
@@ -83,43 +82,25 @@ parsed_times = create_prayer_times_dict(extracted_times)
 if not parsed_times:
     print("No valid times found on the webpage. Exiting.")
     exit()
+
 def schedule_next_prayer():
     now = datetime.datetime.now()
     next_prayer_time = None
     next_prayer_name = None
 
-    # Add Mesaharaty times
+    # Add Mesaharaty time
     fajr_time = parsed_times.get("FAJR", {}).get("time")
     if fajr_time:
         fajr_datetime = datetime.datetime.combine(now.date(), fajr_time)
-        
-        # 1 hour 30 minutes before Fajr
-        mesaharaty_time_1 = fajr_datetime - datetime.timedelta(hours=1, minutes=30)
-        # 1 hour before Fajr
-        mesaharaty_time_2 = fajr_datetime - datetime.timedelta(hours=1)
-        # 30 minutes before Fajr
-        mesaharaty_time_3 = fajr_datetime - datetime.timedelta(minutes=30)
+        mesaharaty_time = fajr_datetime - datetime.timedelta(hours=1, minutes=30)
 
-        # Adjust times if they're in the past
-        if mesaharaty_time_1 <= now:
-            mesaharaty_time_1 += datetime.timedelta(days=1)
-        if mesaharaty_time_2 <= now:
-            mesaharaty_time_2 += datetime.timedelta(days=1)
-        if mesaharaty_time_3 <= now:
-            mesaharaty_time_3 += datetime.timedelta(days=1)
+        if mesaharaty_time <= now:
+            mesaharaty_time += datetime.timedelta(days=1)
 
-        # Check all three Mesaharaty times
-        if next_prayer_time is None or mesaharaty_time_1 < next_prayer_time:
-            next_prayer_time = mesaharaty_time_1
-            next_prayer_name = "MESAHARATY_1"
-            
-        if next_prayer_time is None or mesaharaty_time_2 < next_prayer_time:
-            next_prayer_time = mesaharaty_time_2
-            next_prayer_name = "MESAHARATY_2"
-            
-        if next_prayer_time is None or mesaharaty_time_3 < next_prayer_time:
-            next_prayer_time = mesaharaty_time_3
-            next_prayer_name = "MESAHARATY_3"
+        if next_prayer_time is None or mesaharaty_time < next_prayer_time:
+            next_prayer_time = mesaharaty_time
+            next_prayer_name = "MESAHARATY"
+
 
     # Convert times to datetime for proper comparison
     for prayer, data in parsed_times.items():
@@ -149,8 +130,12 @@ def play_sound_on_nest(sound_url, sleep_duration, nest_name, preferred_volume):
         cast.wait()
         cast.set_volume(preferred_volume)
 
-        # Play Azan
+        # Stop any currently playing media
         mc = cast.media_controller
+        if mc.status and mc.status.player_state in ['PLAYING', 'PAUSED']:
+            mc.stop()
+
+        # Play Azan
         mc.play_media(sound_url, 'audio/mp3')
         mc.block_until_active()
         time.sleep(sleep_duration)
@@ -175,46 +160,24 @@ def play_sound_on_nest(sound_url, sleep_duration, nest_name, preferred_volume):
 def check_and_play():
     now = datetime.datetime.now()
     print(f"Checking time: {now.strftime('%H:%M')}")
-    
-    # Check for Mesaharaty times
+    # Check for Mesaharaty first
     fajr_time = parsed_times.get("FAJR", {}).get("time")
     if fajr_time:
         fajr_datetime = datetime.datetime.combine(now.date(), fajr_time)
-        mesaharaty_time_1 = fajr_datetime - datetime.timedelta(hours=1, minutes=30)
-        mesaharaty_time_2 = fajr_datetime - datetime.timedelta(hours=1)
-        mesaharaty_time_3 = fajr_datetime - datetime.timedelta(minutes=30)
+        mesaharaty_time = fajr_datetime - datetime.timedelta(hours=1, minutes=30)
 
-        # If Fajr is after midnight, adjust Mesaharaty times
+        # If Fajr is after midnight, adjust Mesaharaty time
         if fajr_datetime < datetime.datetime.combine(now.date(), datetime.time(hour=3)):
-            mesaharaty_time_1 = mesaharaty_time_1 + datetime.timedelta(days=1)
-            mesaharaty_time_2 = mesaharaty_time_2 + datetime.timedelta(days=1)
-            mesaharaty_time_3 = mesaharaty_time_3 + datetime.timedelta(days=1)
+            mesaharaty_time = mesaharaty_time + datetime.timedelta(days=1)
 
-        # Check all three Mesaharaty times with 2-minute window
-        time_diff_1 = (now - mesaharaty_time_1).total_seconds() / 60
-        time_diff_2 = (now - mesaharaty_time_2).total_seconds() / 60
-        time_diff_3 = (now - mesaharaty_time_3).total_seconds() / 60
-        
-        if 0 <= time_diff_1 <= 2:
-            print("Time for first Mesaharaty (1 hour 30 minutes before Fajr)")
-            play_mesaharaty_on_all_devices(
-                MESAHARATY["MESAHARATY_AUDIO"]["URL"],
-                MESAHARATY["MESAHARATY_AUDIO"]["DURATION"], 0.5
-            )
-        elif 0 <= time_diff_2 <= 2:
-            print("Time for second Mesaharaty (1 hour before Fajr)")
-            play_mesaharaty_on_all_devices(
-                MESAHARATY["MESAHARATY_AUDIO"]["URL"],
-                MESAHARATY["MESAHARATY_AUDIO"]["DURATION"], 0.5
-            )
-        elif 0 <= time_diff_3 <= 2:
-            print("Time for third Mesaharaty (30 minutes before Fajr)")
+        time_diff = (now - mesaharaty_time).total_seconds() / 60
+        if 0 <= time_diff <= 2:
+            print("Time for Mesaharaty")
             play_mesaharaty_on_all_devices(
                 MESAHARATY["MESAHARATY_AUDIO"]["URL"],
                 MESAHARATY["MESAHARATY_AUDIO"]["DURATION"], 0.5
             )
 
-    # Check regular prayer times
     for prayer, timeData in parsed_times.items():
         prayer_time = timeData["time"]
         prayer_datetime = datetime.datetime.combine(now.date(), prayer_time)
@@ -266,6 +229,7 @@ schedule_next_prayer()
 schedule.every().day.at("01:00").do(update_prayer_times)
 # Initial update
 update_prayer_times()
+
 # Main loop
 while True:
     schedule.run_pending()
