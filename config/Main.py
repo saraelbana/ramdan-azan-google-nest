@@ -4,6 +4,7 @@ import datetime
 import pychromecast
 import time
 import schedule
+import threading
 from constants.ChromeCastNamesConsttants import device_names
 from constants.PrayersAzanSoundsURLConstants import azan_sound_urls
 from constants.PrayersTimesCSSSelectorsConstants import css_selectors
@@ -25,11 +26,20 @@ CSS_SELECTOR_FOR_TIMES = [
 
 LIVINGROOM_DEVICE_NAME = device_names["livingRoomDisplay"]
 BEDROOM_DEVICE_NAME = device_names["bedroomSpeaker"]
+UPPER_LIVING_DEVICE_NAME = device_names["upperLivingSpeaker"]
 
-def play_mesaharaty_on_all_devices(sound_url, sleep_duration, preferred_volune):
-    devices = [LIVINGROOM_DEVICE_NAME, BEDROOM_DEVICE_NAME]
+def play_on_all_devices(sound_url, sleep_duration, preferred_volune):
+    devices = [LIVINGROOM_DEVICE_NAME, BEDROOM_DEVICE_NAME, UPPER_LIVING_DEVICE_NAME]
+    threads = []
+
     for device in devices:
-        play_sound_on_nest(sound_url, sleep_duration, device, preferred_volune)
+        print(f"Playing sound on {device} with URL: {sound_url} for {sleep_duration} seconds at volume {preferred_volune}")
+        thread = threading.Thread(target=play_sound_on_nest, args=(sound_url, sleep_duration, device, preferred_volune))
+        threads.append(thread)
+        thread.start()
+
+    for thread in threads:
+        thread.join()
 # --- Web Scraping and Time Extraction ---
 def get_times_from_webpage(url, css_selectors):
     try:
@@ -123,26 +133,38 @@ def schedule_next_prayer():
 
     print(f"Next prayer scheduled: {next_prayer_name} at {next_prayer_time.strftime('%H:%M')}")
 # --- Google Nest Playback ---
-def play_sound_on_nest(sound_url, sleep_duration, nest_name, preferred_volume):
+def play_sound_on_nest(sound_url, sleep_duration, nest_name, preferred_volume,  max_retries=3):
     try:
         chromecasts, browser = pychromecast.get_chromecasts()
         cast = next(cc for cc in chromecasts if cc.name == nest_name)
         cast.wait()
         cast.set_volume(preferred_volume)
 
-        # Stop any currently playing media
+        # Stop any currently playing media with retries
         mc = cast.media_controller
-        if mc.status and mc.status.player_state in ['PLAYING', 'PAUSED']:
-            mc.stop()
+        print(f"device: {nest_name} mc.status: {mc.status} & mc.status.player_state: {mc.status.player_state}")
+        for attempt in range(max_retries):
+            try:
+                if mc.status and mc.status.player_state in ['PLAYING', 'PAUSED']:
+                    mc.stop()
+                    print(f"stopped device: {nest_name} mc.status: {mc.status} & mc.status.player_state: {mc.status.player_state}")
+                break
+            except Exception as e:
+                print(f"Attempt {attempt + 1} to stop media failed: {e}")
+                time.sleep(1)
+        else:
+            print(f"Failed to stop media after {max_retries} attempts.")
 
         # Play Azan
         mc.play_media(sound_url, 'audio/mp3')
+        print(f"Playing sound on {nest_name} with URL: {sound_url} for {sleep_duration} seconds at volume {preferred_volume}")
         mc.block_until_active()
         time.sleep(sleep_duration)
         mc.stop()
 
         # Play Duaa
         mc.play_media(DUAAS["MAGHRIB_ALSHAARAWY_DUAA_AUDIO"]["URL"], 'audio/mp3')
+        print(f"Playing sound on {nest_name} with URL: {DUAAS['MAGHRIB_ALSHAARAWY_DUAA_AUDIO']['URL']} for {DUAAS['MAGHRIB_ALSHAARAWY_DUAA_AUDIO']['DURATION']} seconds at volume 0.4")
         mc.block_until_active()
         time.sleep(DUAAS["MAGHRIB_ALSHAARAWY_DUAA_AUDIO"]["DURATION"])
         cast.set_volume(0.4)
@@ -172,8 +194,8 @@ def check_and_play():
 
         time_diff = (now - mesaharaty_time).total_seconds() / 60
         if 0 <= time_diff <= 2:
-            print("Time for Mesaharaty")
-            play_mesaharaty_on_all_devices(
+            print("Time for Mesaharaty" + mesaharaty_time.strftime('%H:%M'))
+            play_on_all_devices(
                 MESAHARATY["MESAHARATY_AUDIO"]["URL"],
                 MESAHARATY["MESAHARATY_AUDIO"]["DURATION"], 0.5
             )
@@ -198,24 +220,33 @@ def check_and_play():
             if azan_key in azan_sound_urls:
                 azan_data = azan_sound_urls[azan_key]
                 if prayer in ["FAJR", "SHUROOQ"]:
-                    play_sound_on_nest(
+                    print(f"Playing Azan for {prayer} prayer" + "time: " + prayer_time.strftime('%H:%M'))
+                    play_on_all_devices(
                         azan_data["URL"],
                         azan_data["DURATION"],
-                        BEDROOM_DEVICE_NAME, 0.4
+                        0.4
                     )
-                elif prayer in ["DHUHR", "ASR"]:(
+                    # play_sound_on_nest(
+                    #     azan_data["URL"],
+                    #     azan_data["DURATION"],
+                    #     BEDROOM_DEVICE_NAME, 0.4
+                    # )
+                elif prayer in ["DHUHR", "ASR"]:
+                    print(f"Playing Azan for {prayer} prayer" + "time: " + prayer_time.strftime('%H:%M'))
+                    play_sound_on_nest(
+                        azan_data["URL"],
+                        azan_data["DURATION"],
+                        LIVINGROOM_DEVICE_NAME, 0.5
+                    )
+                elif prayer in ["MAGHRIB"]:
+                    print(f"Playing Azan for {prayer} prayer" + "time: " + prayer_time.strftime('%H:%M'))
                     play_sound_on_nest(
                         azan_data["URL"],
                         azan_data["DURATION"],
                         LIVINGROOM_DEVICE_NAME, 0.6
-                    ))
-                elif prayer in ["MAGHRIB"]:(
-                    play_sound_on_nest(
-                        azan_data["URL"],
-                        azan_data["DURATION"],
-                        LIVINGROOM_DEVICE_NAME, 0.6
-                    ))
+                    )
                 else:
+                    print(f"Playing Azan for {prayer} prayer" + "time: " + prayer_time.strftime('%H:%M'))
                     play_sound_on_nest(
                         azan_data["URL"],
                         azan_data["DURATION"],
