@@ -234,24 +234,39 @@ def check_and_play():
                     # )
                 elif prayer in ["DHUHR", "ASR"]:
                     print(f"Playing Azan for {prayer} prayer" + "time: " + prayer_time.strftime('%H:%M'))
-                    play_sound_on_nest(
+                    # play_sound_on_nest(
+                    #     azan_data["URL"],
+                    #     azan_data["DURATION"],
+                    #     LIVINGROOM_DEVICE_NAME, 0.5
+                    # )
+                    play_on_all_devices(
                         azan_data["URL"],
                         azan_data["DURATION"],
-                        LIVINGROOM_DEVICE_NAME, 0.5
+                        0.4
                     )
                 elif prayer in ["MAGHRIB"]:
                     print(f"Playing Azan for {prayer} prayer" + "time: " + prayer_time.strftime('%H:%M'))
-                    play_sound_on_nest(
+                    # play_sound_on_nest(
+                    #     azan_data["URL"],
+                    #     azan_data["DURATION"],
+                    #     LIVINGROOM_DEVICE_NAME, 0.6
+                    # )
+                    play_on_all_devices(
                         azan_data["URL"],
                         azan_data["DURATION"],
-                        LIVINGROOM_DEVICE_NAME, 0.6
+                        0.5
                     )
                 else:
                     print(f"Playing Azan for {prayer} prayer" + "time: " + prayer_time.strftime('%H:%M'))
-                    play_sound_on_nest(
+                    # play_sound_on_nest(
+                    #     azan_data["URL"],
+                    #     azan_data["DURATION"],
+                    #     LIVINGROOM_DEVICE_NAME, 0.7
+                    # )
+                    play_on_all_devices(
                         azan_data["URL"],
                         azan_data["DURATION"],
-                        LIVINGROOM_DEVICE_NAME, 0.7
+                        0.4
                     )
                 schedule_next_prayer()
                 break
