@@ -158,6 +158,7 @@ def play_sound_on_nest(sound_url, sleep_duration, nest_name, preferred_volume,  
         # Play Azan
         mc.play_media(sound_url, 'audio/mp3')
         print(f"Playing sound on {nest_name} with URL: {sound_url} for {sleep_duration} seconds at volume {preferred_volume}")
+        print(f"stopped device: {nest_name} mc.status: {mc.status} & mc.status.player_state: {mc.status.player_state}")
         mc.block_until_active()
         time.sleep(sleep_duration)
         mc.stop()
