@@ -164,12 +164,13 @@ def play_sound_on_nest(sound_url, sleep_duration, nest_name, preferred_volume,  
         mc.stop()
 
         # Play Duaa
-        mc.play_media(DUAAS["MAGHRIB_ALSHAARAWY_DUAA_AUDIO"]["URL"], 'audio/mp3')
-        print(f"Playing sound on {nest_name} with URL: {DUAAS['MAGHRIB_ALSHAARAWY_DUAA_AUDIO']['URL']} for {DUAAS['MAGHRIB_ALSHAARAWY_DUAA_AUDIO']['DURATION']} seconds at volume 0.4")
-        mc.block_until_active()
-        time.sleep(DUAAS["MAGHRIB_ALSHAARAWY_DUAA_AUDIO"]["DURATION"])
-        cast.set_volume(0.4)
-        mc.stop()
+        if(sound_url != MESAHARATY["MESAHARATY_AUDIO"]["URL"]):
+            mc.play_media(DUAAS["MAGHRIB_ALSHAARAWY_DUAA_AUDIO"]["URL"], 'audio/mp3')
+            print(f"Playing sound on {nest_name} with URL: {DUAAS['MAGHRIB_ALSHAARAWY_DUAA_AUDIO']['URL']} for {DUAAS['MAGHRIB_ALSHAARAWY_DUAA_AUDIO']['DURATION']} seconds at volume 0.4")
+            mc.block_until_active()
+            time.sleep(DUAAS["MAGHRIB_ALSHAARAWY_DUAA_AUDIO"]["DURATION"])
+            cast.set_volume(0.4)
+            mc.stop()
 
         # cast.quit()
         cast.disconnect()
@@ -200,6 +201,8 @@ def check_and_play():
                 MESAHARATY["MESAHARATY_AUDIO"]["URL"],
                 MESAHARATY["MESAHARATY_AUDIO"]["DURATION"], 0.5
             )
+            # schedule_next_prayer()
+            # return
 
     for prayer, timeData in parsed_times.items():
         prayer_time = timeData["time"]
@@ -227,53 +230,35 @@ def check_and_play():
                         azan_data["DURATION"],
                         0.4
                     )
-                    # play_sound_on_nest(
-                    #     azan_data["URL"],
-                    #     azan_data["DURATION"],
-                    #     BEDROOM_DEVICE_NAME, 0.4
-                    # )
                 elif prayer in ["DHUHR", "ASR"]:
                     print(f"Playing Azan for {prayer} prayer" + "time: " + prayer_time.strftime('%H:%M'))
-                    # play_sound_on_nest(
-                    #     azan_data["URL"],
-                    #     azan_data["DURATION"],
-                    #     LIVINGROOM_DEVICE_NAME, 0.5
-                    # )
                     play_on_all_devices(
                         azan_data["URL"],
                         azan_data["DURATION"],
-                        0.4
+                        0.6
                     )
                 elif prayer in ["MAGHRIB"]:
                     print(f"Playing Azan for {prayer} prayer" + "time: " + prayer_time.strftime('%H:%M'))
-                    # play_sound_on_nest(
-                    #     azan_data["URL"],
-                    #     azan_data["DURATION"],
-                    #     LIVINGROOM_DEVICE_NAME, 0.6
-                    # )
                     play_on_all_devices(
                         azan_data["URL"],
                         azan_data["DURATION"],
-                        0.5
+                        0.7
                     )
                 else:
                     print(f"Playing Azan for {prayer} prayer" + "time: " + prayer_time.strftime('%H:%M'))
-                    # play_sound_on_nest(
-                    #     azan_data["URL"],
-                    #     azan_data["DURATION"],
-                    #     LIVINGROOM_DEVICE_NAME, 0.7
-                    # )
                     play_on_all_devices(
                         azan_data["URL"],
                         azan_data["DURATION"],
-                        0.4
+                        0.6
                     )
-                schedule_next_prayer()
-                break
+        break
+    schedule_next_prayer()
+
+
 # Schedule the next prayer after updating the times
 schedule_next_prayer()
 # Add daily update schedule
-schedule.every().day.at("01:00").do(update_prayer_times)
+schedule.every().day.at("02:00").do(update_prayer_times)
 # Initial update
 update_prayer_times()
 
