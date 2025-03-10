@@ -201,8 +201,8 @@ def check_and_play():
                 MESAHARATY["MESAHARATY_AUDIO"]["URL"],
                 MESAHARATY["MESAHARATY_AUDIO"]["DURATION"], 0.5
             )
-            # schedule_next_prayer()
-            # return
+            schedule_next_prayer()
+            return
 
     for prayer, timeData in parsed_times.items():
         prayer_time = timeData["time"]
@@ -251,10 +251,8 @@ def check_and_play():
                         azan_data["DURATION"],
                         0.6
                     )
-        break
-    schedule_next_prayer()
-
-
+                schedule_next_prayer()
+                break
 # Schedule the next prayer after updating the times
 schedule_next_prayer()
 # Add daily update schedule
